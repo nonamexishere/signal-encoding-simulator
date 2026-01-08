@@ -28,7 +28,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Custom CSS for better styling - supports both light and dark mode
 st.markdown("""
 <style>
     .main-header {
@@ -47,11 +47,29 @@ st.markdown("""
         color: white;
         margin-bottom: 1rem;
     }
-    .stMetric {
-        background: #f1f5f9;
+    
+    /* Metric card styling for both themes */
+    [data-testid="stMetric"] {
+        background: rgba(255, 255, 255, 0.95);
         padding: 1rem;
         border-radius: 0.5rem;
+        border: 1px solid #e2e8f0;
     }
+    
+    /* Force dark text on metric values for visibility */
+    [data-testid="stMetric"] label {
+        color: #1e293b !important;
+    }
+    
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #0f172a !important;
+        font-weight: 600;
+    }
+    
+    [data-testid="stMetric"] [data-testid="stMetricLabel"] {
+        color: #475569 !important;
+    }
+    
     .info-box {
         background: #eff6ff;
         border-left: 4px solid #2563eb;
