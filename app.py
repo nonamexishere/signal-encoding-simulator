@@ -1,0 +1,401 @@
+"""
+Signal Encoding and Modulation Simulator
+BLG 337E - Principles of Computer Communication
+ITU - Prof. Dr. Abdül Halim Zaim
+
+Streamlit Dashboard for interactive signal simulation
+"""
+import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+from typing import Tuple
+
+# Import encoders
+from encoders.digital_to_digital import DigitalToDigitalEncoder, DigitalToDigitalDecoder
+from encoders.digital_to_analog import DigitalToAnalogModulator, DigitalToAnalogDemodulator
+from encoders.analog_to_digital import AnalogToDigitalConverter, AnalogToDigitalDecoder
+from encoders.analog_to_analog import AnalogToAnalogModulator, AnalogToAnalogDemodulator
+
+# Import visualization
+from visualization.plotter import SignalPlotter
+
+
+# Page configuration
+st.set_page_config(
+    page_title="Signal Simulator",
+    page_icon="📡",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(90deg, #2563eb, #7c3aed);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .mode-card {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        padding: 1.5rem;
+        border-radius: 1rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+    .stMetric {
+        background: #f1f5f9;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+    .info-box {
+        background: #eff6ff;
+        border-left: 4px solid #2563eb;
+        padding: 1rem;
+        margin: 1rem 0;
+        border-radius: 0 0.5rem 0.5rem 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Header
+st.markdown('<h1 class="main-header">📡 Signal Encoding & Modulation Simulator</h1>', unsafe_allow_html=True)
+st.markdown("**BLG 337E** - Principles of Computer Communication | ITU", unsafe_allow_html=True)
+
+# Initialize plotter
+plotter = SignalPlotter(figsize=(12, 5))
+
+
+def generate_analog_signal(freq: float = 5.0, duration: float = 1.0, 
+                          sample_rate: int = 1000) -> Tuple[np.ndarray, np.ndarray]:
+    """Generate a sample analog sine wave signal."""
+    t = np.linspace(0, duration, int(sample_rate * duration))
+    signal = np.sin(2 * np.pi * freq * t)
+    return t, signal
+
+
+def main():
+    # Sidebar - Mode Selection
+    st.sidebar.markdown("## 🎛️ Transmission Mode")
+    
+    mode = st.sidebar.radio(
+        "Select Mode:",
+        ["Digital → Digital", "Digital → Analog", "Analog → Digital", "Analog → Analog"],
+        index=0
+    )
+    
+    st.sidebar.markdown("---")
+    
+    # Mode-specific UI
+    if mode == "Digital → Digital":
+        digital_to_digital_mode()
+    elif mode == "Digital → Analog":
+        digital_to_analog_mode()
+    elif mode == "Analog → Digital":
+        analog_to_digital_mode()
+    else:
+        analog_to_analog_mode()
+
+
+def digital_to_digital_mode():
+    """Digital-to-Digital encoding mode."""
+    st.markdown("### 🔢 Digital-to-Digital Encoding")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("#### Algorithm Selection")
+        algorithm = st.selectbox(
+            "Encoding Algorithm:",
+            DigitalToDigitalEncoder.ALGORITHMS,
+            index=0
+        )
+        
+        # Algorithm descriptions
+        algo_desc = {
+            'NRZ-L': "**NRZ-L**: 0 = High voltage, 1 = Low voltage",
+            'NRZI': "**NRZI**: 1 = Transition at start, 0 = No transition",
+            'Bipolar-AMI': "**AMI**: 0 = Zero level, 1 = Alternating ±V",
+            'Manchester': "**Manchester**: 0 = High→Low, 1 = Low→High (mid-bit)",
+            'Differential Manchester': "**Diff. Manchester**: Always mid-bit transition; 0 = transition at start",
+            'B8ZS': "**B8ZS**: AMI + substitution for 8 zeros (North American)",
+            'HDB3': "**HDB3**: AMI + substitution for 4 zeros (European)"
+        }
+        st.info(algo_desc.get(algorithm, ""))
+        
+        st.markdown("#### Input Data")
+        binary_input = st.text_input(
+            "Binary Data:",
+            value="10110001",
+            help="Enter binary string (0s and 1s only)"
+        )
+        
+        # Validate input
+        if not all(c in '01' for c in binary_input):
+            st.error("Please enter only 0s and 1s")
+            return
+        
+        if len(binary_input) < 1:
+            st.warning("Please enter at least 1 bit")
+            return
+        
+        samples_per_bit = st.slider("Samples per bit:", 50, 200, 100)
+    
+    with col2:
+        # Encode
+        encoder = DigitalToDigitalEncoder(samples_per_bit=samples_per_bit)
+        t, encoded = encoder.encode(binary_input, algorithm)
+        
+        # Plot
+        fig = plotter.plot_encoding_process(binary_input, t, encoded, algorithm)
+        st.pyplot(fig)
+        plt.close(fig)
+        
+        # Decode
+        decoder = DigitalToDigitalDecoder(samples_per_bit=samples_per_bit)
+        decoded = decoder.decode(encoded, algorithm)
+        
+        # Results
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Input", binary_input)
+        col_b.metric("Decoded", decoded)
+        col_c.metric("Match", "✅ Yes" if decoded == binary_input else "❌ No")
+
+
+def digital_to_analog_mode():
+    """Digital-to-Analog modulation mode."""
+    st.markdown("### 📶 Digital-to-Analog Modulation")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("#### Algorithm Selection")
+        algorithm = st.selectbox(
+            "Modulation Algorithm:",
+            DigitalToAnalogModulator.ALGORITHMS,
+            index=0
+        )
+        
+        algo_desc = {
+            'ASK': "**ASK**: Carrier amplitude varies (0 = off, 1 = on)",
+            'BFSK': "**BFSK**: Carrier frequency varies (0 = f₁, 1 = f₂)",
+            'BPSK': "**BPSK**: Carrier phase varies (0 = 0°, 1 = 180°)",
+            'DPSK': "**DPSK**: Phase change represents data",
+            'QAM': "**QAM**: Combines ASK + PSK (4-QAM uses 2 bits/symbol)"
+        }
+        st.info(algo_desc.get(algorithm, ""))
+        
+        st.markdown("#### Input Data")
+        binary_input = st.text_input(
+            "Binary Data:",
+            value="10101100",
+            key="d2a_input"
+        )
+        
+        if not all(c in '01' for c in binary_input):
+            st.error("Please enter only 0s and 1s")
+            return
+        
+        st.markdown("#### Parameters")
+        carrier_freq = st.slider("Carrier Frequency (Hz):", 5, 50, 10)
+        sample_rate = st.slider("Sample Rate:", 500, 2000, 1000)
+        bit_duration = st.slider("Bit Duration (s):", 0.5, 2.0, 1.0, 0.1)
+    
+    with col2:
+        # Modulate
+        modulator = DigitalToAnalogModulator(
+            carrier_freq=carrier_freq,
+            sample_rate=sample_rate,
+            bit_duration=bit_duration
+        )
+        t, modulated = modulator.modulate(binary_input, algorithm)
+        
+        # Plot
+        fig = plotter.plot_modulation_process(binary_input, t, modulated, algorithm)
+        st.pyplot(fig)
+        plt.close(fig)
+        
+        # Demodulate
+        demodulator = DigitalToAnalogDemodulator(
+            carrier_freq=carrier_freq,
+            sample_rate=sample_rate,
+            bit_duration=bit_duration
+        )
+        decoded = demodulator.demodulate(t, modulated, algorithm)
+        
+        # Handle QAM padding
+        compare_input = binary_input
+        if algorithm == 'QAM' and len(binary_input) % 2 != 0:
+            compare_input = binary_input + '0'
+        
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Input", binary_input)
+        col_b.metric("Decoded", decoded)
+        col_c.metric("Match", "✅ Yes" if decoded == compare_input else "❌ No")
+
+
+def analog_to_digital_mode():
+    """Analog-to-Digital conversion mode."""
+    st.markdown("### 🔊→🔢 Analog-to-Digital Conversion")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("#### Algorithm Selection")
+        algorithm = st.selectbox(
+            "Conversion Algorithm:",
+            AnalogToDigitalConverter.ALGORITHMS,
+            index=0
+        )
+        
+        algo_desc = {
+            'PCM': "**PCM**: Sample → Quantize → Encode (Nyquist: fs ≥ 2fmax)",
+            'Delta Modulation': "**DM**: 1-bit encoding using staircase approximation"
+        }
+        st.info(algo_desc.get(algorithm, ""))
+        
+        st.markdown("#### Signal Parameters")
+        signal_freq = st.slider("Signal Frequency (Hz):", 1, 20, 5)
+        duration = st.slider("Duration (s):", 0.5, 2.0, 1.0, 0.1)
+        
+        st.markdown("#### Conversion Parameters")
+        sample_rate = st.slider("Sample Rate (Hz):", 50, 500, 200, key="a2d_sr")
+        
+        if algorithm == 'PCM':
+            quant_bits = st.slider("Quantization Bits:", 2, 8, 4)
+            st.caption(f"Levels: {2**quant_bits}")
+        else:
+            quant_bits = 1
+            step_size = st.slider("Step Size:", 0.05, 0.3, 0.1, 0.01)
+        
+        # Nyquist check
+        nyquist_freq = sample_rate / 2
+        if signal_freq > nyquist_freq:
+            st.warning(f"⚠️ Aliasing! fs={sample_rate} < 2×{signal_freq}={2*signal_freq}")
+        else:
+            st.success(f"✅ Nyquist satisfied: {sample_rate} ≥ 2×{signal_freq}")
+    
+    with col2:
+        # Generate analog signal
+        t, signal = generate_analog_signal(signal_freq, duration, 1000)
+        
+        # Convert
+        converter = AnalogToDigitalConverter(
+            sample_rate=sample_rate,
+            quantization_bits=quant_bits
+        )
+        sampled_t, bitstream, quantized = converter.convert(t, signal, algorithm)
+        
+        # Plot
+        if algorithm == 'PCM':
+            fig = plotter.plot_pcm_process(t, signal, sampled_t, quantized, bitstream)
+        else:
+            fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 10))
+            
+            ax1.plot(t, signal, 'b-', label='Original')
+            ax1.set_title('Original Signal', fontweight='bold')
+            ax1.grid(True, alpha=0.3)
+            ax1.legend()
+            
+            ax2.plot(t, signal, 'b-', alpha=0.5, label='Original')
+            ax2.step(sampled_t, quantized, 'g-', where='post', label='Staircase')
+            ax2.set_title('Delta Modulation Staircase', fontweight='bold')
+            ax2.grid(True, alpha=0.3)
+            ax2.legend()
+            
+            bits_display = [int(b) for b in bitstream[:100]]
+            ax3.bar(range(len(bits_display)), bits_display, width=0.8, color='#16a34a')
+            ax3.set_title(f'Bitstream (first {len(bits_display)} of {len(bitstream)} bits)', fontweight='bold')
+            ax3.set_yticks([0, 1])
+            ax3.grid(True, alpha=0.3, axis='y')
+            
+            plt.tight_layout()
+        
+        st.pyplot(fig)
+        plt.close(fig)
+        
+        # Stats
+        col_a, col_b, col_c = st.columns(3)
+        col_a.metric("Samples", len(sampled_t))
+        col_b.metric("Bits Generated", len(bitstream))
+        col_c.metric("Bits/Sample", quant_bits if algorithm == 'PCM' else 1)
+
+
+def analog_to_analog_mode():
+    """Analog-to-Analog modulation mode."""
+    st.markdown("### 🔊→📡 Analog-to-Analog Modulation")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("#### Algorithm Selection")
+        algorithm = st.selectbox(
+            "Modulation Algorithm:",
+            AnalogToAnalogModulator.ALGORITHMS,
+            index=0
+        )
+        
+        algo_desc = {
+            'AM': "**AM**: s(t) = [1 + m·x(t)]·cos(2πfc·t)",
+            'FM': "**FM**: s(t) = cos(2π[fc + kf·x(t)]·t)"
+        }
+        st.info(algo_desc.get(algorithm, ""))
+        
+        st.markdown("#### Message Signal")
+        message_freq = st.slider("Message Frequency (Hz):", 1, 20, 5)
+        duration = st.slider("Duration (s):", 0.2, 1.0, 0.5, 0.05)
+        
+        st.markdown("#### Carrier Parameters")
+        carrier_freq = st.slider("Carrier Frequency (Hz):", 50, 500, 100)
+        sample_rate = st.slider("Sample Rate:", 2000, 10000, 5000)
+        
+        if algorithm == 'AM':
+            mod_index = st.slider("Modulation Index (m):", 0.1, 1.0, 0.5, 0.1)
+        else:
+            freq_dev = st.slider("Frequency Deviation:", 10, 100, 50)
+    
+    with col2:
+        # Generate message signal
+        t = np.linspace(0, duration, int(sample_rate * duration))
+        message = np.sin(2 * np.pi * message_freq * t)
+        
+        # Modulate
+        modulator = AnalogToAnalogModulator(
+            carrier_freq=carrier_freq,
+            sample_rate=sample_rate
+        )
+        _, modulated = modulator.modulate(t, message, algorithm)
+        
+        # Plot
+        fig = plotter.plot_am_fm_process(t, message, modulated, algorithm)
+        st.pyplot(fig)
+        plt.close(fig)
+        
+        # Demodulate
+        demodulator = AnalogToAnalogDemodulator(
+            carrier_freq=carrier_freq,
+            sample_rate=sample_rate
+        )
+        _, demodulated = demodulator.demodulate(t, modulated, algorithm)
+        
+        # Show demodulated
+        st.markdown("#### Demodulated Signal")
+        fig2, ax = plt.subplots(figsize=(12, 3))
+        ax.plot(t, demodulated, 'g-', linewidth=1.5, label='Demodulated')
+        ax.plot(t, message / np.max(np.abs(message)), 'b--', alpha=0.5, label='Original (normalized)')
+        ax.set_xlabel('Time (s)')
+        ax.set_ylabel('Amplitude')
+        ax.set_title('Demodulated Signal Comparison', fontweight='bold')
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        st.pyplot(fig2)
+        plt.close(fig2)
+
+
+if __name__ == "__main__":
+    main()
