@@ -1,6 +1,9 @@
 """
 Version B: Runtime Optimized Implementation
-Optimized for speed using NumPy vectorization and minimizing loops.
+Optimized by Google Gemini Pro for speed using NumPy vectorization and minimizing loops.
+
+AI Tool: Google Gemini Pro
+Optimization Focus: Runtime Performance
 """
 import numpy as np
 from typing import List, Tuple

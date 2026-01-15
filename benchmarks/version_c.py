@@ -1,6 +1,9 @@
 """
 Version C: Memory and Readability Optimized Implementation
-Optimized for memory usage and code clarity with better documentation.
+Optimized by OpenAI ChatGPT for memory usage and code clarity with better documentation.
+
+AI Tool: OpenAI ChatGPT
+Optimization Focus: Memory Efficiency & Readability
 """
 import numpy as np
 from typing import List, Tuple

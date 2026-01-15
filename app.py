@@ -426,8 +426,8 @@ def benchmark_mode():
     st.markdown("""
     Compare three versions of the encoding algorithms:
     - **Version A (Original)**: Basic Python loops
-    - **Version B (Gemini - Runtime)**: NumPy vectorization for speed
-    - **Version C (Gemini - Memory)**: float32 arrays for 50% memory reduction
+    - **Version B (Google Gemini Pro)**: NumPy vectorization for speed
+    - **Version C (OpenAI ChatGPT)**: float32 arrays for 50% memory reduction
     """)
     
     col1, col2 = st.columns([1, 2])
@@ -449,11 +449,11 @@ def benchmark_mode():
         st.markdown("---")
         st.markdown("#### AI Tools Used")
         st.info("""
-        **Version B**: Optimized by **Google Gemini (Antigravity)**
+        **Version B**: Optimized by **Google Gemini Pro**
         - NumPy vectorization
         - Eliminated Python loops
         
-        **Version C**: Optimized by **Google Gemini (Antigravity)**  
+        **Version C**: Optimized by **OpenAI ChatGPT**  
         - float32 instead of float64
         - Memory-efficient operations
         """)
