@@ -102,7 +102,7 @@ def main():
     
     mode = st.sidebar.radio(
         "Select Mode:",
-        ["Digital → Digital", "Digital → Analog", "Analog → Digital", "Analog → Analog"],
+        ["Digital → Digital", "Digital → Analog", "Analog → Digital", "Analog → Analog", "⚡ Benchmark"],
         index=0
     )
     
@@ -115,8 +115,10 @@ def main():
         digital_to_analog_mode()
     elif mode == "Analog → Digital":
         analog_to_digital_mode()
-    else:
+    elif mode == "Analog → Analog":
         analog_to_analog_mode()
+    elif mode == "⚡ Benchmark":
+        benchmark_mode()
 
 
 def digital_to_digital_mode():
@@ -413,6 +415,220 @@ def analog_to_analog_mode():
         plt.tight_layout()
         st.pyplot(fig2)
         plt.close(fig2)
+
+
+def benchmark_mode():
+    """Benchmark mode comparing Version A, B, and C implementations."""
+    import timeit
+    import tracemalloc
+    
+    st.markdown("### ⚡ AI Optimization Benchmark")
+    st.markdown("""
+    Compare three versions of the encoding algorithms:
+    - **Version A (Original)**: Basic Python loops
+    - **Version B (Gemini - Runtime)**: NumPy vectorization for speed
+    - **Version C (Gemini - Memory)**: float32 arrays for 50% memory reduction
+    """)
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        st.markdown("#### Test Configuration")
+        
+        test_algorithm = st.selectbox(
+            "Algorithm to Test:",
+            ["NRZ-L Encoding", "Manchester Encoding", "ASK Modulation", "PCM Conversion", "AM Modulation"],
+            index=0
+        )
+        
+        data_size = st.slider("Data Size (samples/bits):", 100, 5000, 1000, 100)
+        iterations = st.slider("Benchmark Iterations:", 10, 100, 50)
+        
+        run_benchmark = st.button("🚀 Run Benchmark", type="primary")
+        
+        st.markdown("---")
+        st.markdown("#### AI Tools Used")
+        st.info("""
+        **Version B**: Optimized by **Google Gemini (Antigravity)**
+        - NumPy vectorization
+        - Eliminated Python loops
+        
+        **Version C**: Optimized by **Google Gemini (Antigravity)**  
+        - float32 instead of float64
+        - Memory-efficient operations
+        """)
+    
+    with col2:
+        if run_benchmark:
+            # Import benchmark versions
+            from benchmarks.version_a import nrz_l_encode_v1, manchester_encode_v1, ask_modulate_v1, pcm_encode_v1, am_modulate_v1
+            from benchmarks.version_b import nrz_l_encode_v2, manchester_encode_v2, ask_modulate_v2, pcm_encode_v2, am_modulate_v2
+            from benchmarks.version_c import nrz_l_encode_v3, manchester_encode_v3, ask_modulate_v3, pcm_encode_v3, am_modulate_v3
+            
+            # Generate test data
+            test_bits = [np.random.randint(0, 2) for _ in range(data_size)]
+            t = np.linspace(0, 1, data_size)
+            test_signal = np.sin(2 * np.pi * 5 * t)
+            
+            # Select functions based on algorithm
+            if test_algorithm == "NRZ-L Encoding":
+                funcs = [
+                    ("Version A", lambda: nrz_l_encode_v1(test_bits)),
+                    ("Version B", lambda: nrz_l_encode_v2(test_bits)),
+                    ("Version C", lambda: nrz_l_encode_v3(test_bits)),
+                ]
+            elif test_algorithm == "Manchester Encoding":
+                funcs = [
+                    ("Version A", lambda: manchester_encode_v1(test_bits)),
+                    ("Version B", lambda: manchester_encode_v2(test_bits)),
+                    ("Version C", lambda: manchester_encode_v3(test_bits)),
+                ]
+            elif test_algorithm == "ASK Modulation":
+                funcs = [
+                    ("Version A", lambda: ask_modulate_v1(test_bits)),
+                    ("Version B", lambda: ask_modulate_v2(test_bits)),
+                    ("Version C", lambda: ask_modulate_v3(test_bits)),
+                ]
+            elif test_algorithm == "PCM Conversion":
+                funcs = [
+                    ("Version A", lambda: pcm_encode_v1(test_signal)),
+                    ("Version B", lambda: pcm_encode_v2(test_signal)),
+                    ("Version C", lambda: pcm_encode_v3(test_signal)),
+                ]
+            else:  # AM Modulation
+                funcs = [
+                    ("Version A", lambda: am_modulate_v1(t, test_signal)),
+                    ("Version B", lambda: am_modulate_v2(t, test_signal)),
+                    ("Version C", lambda: am_modulate_v3(t, test_signal)),
+                ]
+            
+            # Run benchmarks
+            results = []
+            progress_bar = st.progress(0)
+            
+            for i, (name, func) in enumerate(funcs):
+                # Time measurement
+                timer = timeit.Timer(func)
+                time_taken = (timer.timeit(number=iterations) / iterations) * 1000  # ms
+                
+                # Memory measurement
+                tracemalloc.start()
+                func()
+                current, peak = tracemalloc.get_traced_memory()
+                tracemalloc.stop()
+                memory_kb = peak / 1024
+                
+                results.append({
+                    "Version": name,
+                    "Time (ms)": round(time_taken, 3),
+                    "Memory (KB)": round(memory_kb, 2)
+                })
+                
+                progress_bar.progress((i + 1) / len(funcs))
+            
+            # Display results
+            st.markdown("#### 📊 Benchmark Results")
+            
+            # Results table
+            import pandas as pd
+            df = pd.DataFrame(results)
+            st.dataframe(df, use_container_width=True, hide_index=True)
+            
+            # Calculate improvements
+            base_time = results[0]["Time (ms)"]
+            base_memory = results[0]["Memory (KB)"]
+            
+            col_a, col_b, col_c = st.columns(3)
+            
+            with col_a:
+                st.metric("Version A (Baseline)", f"{results[0]['Time (ms)']} ms")
+            
+            with col_b:
+                time_diff = ((base_time - results[1]["Time (ms)"]) / base_time) * 100
+                st.metric("Version B (Runtime)", f"{results[1]['Time (ms)']} ms", 
+                         delta=f"{time_diff:+.1f}%")
+            
+            with col_c:
+                mem_diff = ((base_memory - results[2]["Memory (KB)"]) / base_memory) * 100
+                st.metric("Version C (Memory)", f"{results[2]['Memory (KB)']} KB",
+                         delta=f"{mem_diff:+.1f}% memory saved")
+            
+            # Bar chart
+            st.markdown("#### Visual Comparison")
+            
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
+            
+            versions = [r["Version"] for r in results]
+            times = [r["Time (ms)"] for r in results]
+            memories = [r["Memory (KB)"] for r in results]
+            colors = ['#6366f1', '#22c55e', '#f59e0b']
+            
+            ax1.bar(versions, times, color=colors)
+            ax1.set_ylabel('Time (ms)')
+            ax1.set_title('Execution Time Comparison')
+            ax1.grid(True, alpha=0.3, axis='y')
+            
+            ax2.bar(versions, memories, color=colors)
+            ax2.set_ylabel('Memory (KB)')
+            ax2.set_title('Memory Usage Comparison')
+            ax2.grid(True, alpha=0.3, axis='y')
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+            plt.close(fig)
+            
+        else:
+            st.info("👆 Configure test parameters and click 'Run Benchmark' to compare versions.")
+            
+            # Show code snippets
+            st.markdown("#### Code Comparison")
+            
+            tab1, tab2, tab3 = st.tabs(["Version A (Original)", "Version B (Runtime)", "Version C (Memory)"])
+            
+            with tab1:
+                st.code('''
+def nrz_l_encode_v1(bits, samples_per_bit=100):
+    """Original version using Python loops."""
+    levels = []
+    for bit in bits:
+        level = -1 if bit == 1 else 1
+        levels.extend([level, level])
+    
+    # Generate signal using loop
+    signal = np.zeros(total_samples)
+    for i, level in enumerate(levels):
+        signal[start:end] = level
+    return t, signal
+                ''', language='python')
+            
+            with tab2:
+                st.code('''
+def nrz_l_encode_v2(bits, samples_per_bit=100):
+    """Vectorized version for better runtime."""
+    bits_array = np.array(bits)
+    
+    # Vectorized: no loops!
+    levels = np.where(bits_array == 1, -1, 1)
+    signal = np.repeat(levels, samples_per_bit)
+    
+    return t, signal
+                ''', language='python')
+            
+            with tab3:
+                st.code('''
+def nrz_l_encode_v3(bits, samples_per_bit=100):
+    """Memory optimized with float32."""
+    # Use float32 (50% less memory)
+    signal = np.empty(total_samples, dtype=np.float32)
+    
+    for i, bit in enumerate(bits):
+        level = -1.0 if bit == 1 else 1.0
+        signal[start:end] = level
+    
+    time = np.linspace(0, n_bits, total_samples, 
+                       dtype=np.float32)
+    return EncodingResult(time=time, signal=signal)
+                ''', language='python')
 
 
 if __name__ == "__main__":
