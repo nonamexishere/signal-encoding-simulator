@@ -9,36 +9,16 @@ from typing import Tuple, List
 
 
 class DigitalToAnalogModulator:
-    """Digital-to-Analog modulation with multiple algorithms."""
-    
     ALGORITHMS = ['ASK', 'BFSK', 'BPSK', 'DPSK', 'QAM']
     
     def __init__(self, carrier_freq: float = 10.0, sample_rate: int = 1000, 
                  bit_duration: float = 1.0):
-        """
-        Initialize modulator.
-        
-        Args:
-            carrier_freq: Carrier frequency in Hz
-            sample_rate: Samples per second
-            bit_duration: Duration of each bit in seconds
-        """
         self.carrier_freq = carrier_freq
         self.sample_rate = sample_rate
         self.bit_duration = bit_duration
         self.samples_per_bit = int(sample_rate * bit_duration)
     
     def modulate(self, data: str, algorithm: str) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Modulate binary data using specified algorithm.
-        
-        Args:
-            data: Binary string (e.g., '10110001')
-            algorithm: Modulation algorithm name
-            
-        Returns:
-            Tuple of (time_array, signal_array)
-        """
         bits = [int(b) for b in data if b in '01']
         
         if algorithm == 'ASK':
@@ -55,11 +35,6 @@ class DigitalToAnalogModulator:
             raise ValueError(f"Unknown algorithm: {algorithm}")
     
     def _ask(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        ASK (Amplitude Shift Keying)
-        1 = Carrier with amplitude A, 0 = No carrier (or reduced amplitude)
-        s(t) = A * cos(2πfc*t) for 1, 0 for 0
-        """
         total_samples = len(bits) * self.samples_per_bit
         t = np.linspace(0, len(bits) * self.bit_duration, total_samples)
         signal = np.zeros(total_samples)
@@ -76,10 +51,6 @@ class DigitalToAnalogModulator:
         return t, signal
     
     def _bfsk(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        BFSK (Binary Frequency Shift Keying)
-        0 = Frequency f1, 1 = Frequency f2
-        """
         f1 = self.carrier_freq * 0.5  # Lower frequency for 0
         f2 = self.carrier_freq * 1.5  # Higher frequency for 1
         
@@ -98,11 +69,6 @@ class DigitalToAnalogModulator:
         return t, signal
     
     def _bpsk(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        BPSK (Binary Phase Shift Keying)
-        0 = Phase 0°, 1 = Phase 180°
-        s(t) = cos(2πfc*t) for 0, cos(2πfc*t + π) for 1
-        """
         total_samples = len(bits) * self.samples_per_bit
         t = np.linspace(0, len(bits) * self.bit_duration, total_samples)
         signal = np.zeros(total_samples)
@@ -118,10 +84,6 @@ class DigitalToAnalogModulator:
         return t, signal
     
     def _dpsk(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        DPSK (Differential Phase Shift Keying)
-        Phase change represents data: 1 = phase shift, 0 = no phase shift
-        """
         total_samples = len(bits) * self.samples_per_bit
         t = np.linspace(0, len(bits) * self.bit_duration, total_samples)
         signal = np.zeros(total_samples)
@@ -140,11 +102,6 @@ class DigitalToAnalogModulator:
         return t, signal
     
     def _qam(self, bits: List[int], constellation_size: int = 4) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        QAM (Quadrature Amplitude Modulation)
-        Combines ASK and PSK: s(t) = I*cos(2πfc*t) + Q*sin(2πfc*t)
-        For 4-QAM (QPSK), uses 2 bits per symbol
-        """
         # Pad bits to even length for 4-QAM
         if len(bits) % 2 != 0:
             bits = bits + [0]
@@ -179,8 +136,6 @@ class DigitalToAnalogModulator:
 
 
 class DigitalToAnalogDemodulator:
-    """Demodulator for digital-to-analog signals."""
-    
     def __init__(self, carrier_freq: float = 10.0, sample_rate: int = 1000,
                  bit_duration: float = 1.0):
         self.carrier_freq = carrier_freq

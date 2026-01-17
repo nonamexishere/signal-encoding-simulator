@@ -1,39 +1,15 @@
-"""
-Digital-to-Digital Encoding Techniques
-Based on William Stallings' Signal Encoding Techniques
-
-Implements: NRZ-L, NRZI, Bipolar-AMI, Manchester, Differential Manchester, B8ZS, HDB3
-"""
 import numpy as np
 from typing import List, Tuple
 
 
 class DigitalToDigitalEncoder:
-    """Digital-to-Digital line coding encoder with multiple algorithms."""
-    
     ALGORITHMS = ['NRZ-L', 'NRZI', 'Bipolar-AMI', 'Manchester', 
                   'Differential Manchester', 'B8ZS', 'HDB3']
     
     def __init__(self, samples_per_bit: int = 100):
-        """
-        Initialize encoder.
-        
-        Args:
-            samples_per_bit: Number of samples per bit for waveform generation
-        """
         self.samples_per_bit = samples_per_bit
     
     def encode(self, data: str, algorithm: str) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Encode binary data using specified algorithm.
-        
-        Args:
-            data: Binary string (e.g., '10110001')
-            algorithm: Encoding algorithm name
-            
-        Returns:
-            Tuple of (time_array, signal_array)
-        """
         bits = [int(b) for b in data if b in '01']
         
         if algorithm == 'NRZ-L':
@@ -72,10 +48,6 @@ class DigitalToDigitalEncoder:
         return t, signal
     
     def _nrz_l(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        NRZ-L (Non-Return to Zero Level)
-        0 = High voltage (+V), 1 = Low voltage (-V)
-        """
         levels = []
         for bit in bits:
             level = -1 if bit == 1 else 1
@@ -83,10 +55,6 @@ class DigitalToDigitalEncoder:
         return self._generate_waveform(levels)
     
     def _nrzi(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        NRZI (Non-Return to Zero Inverted)
-        1 = Transition at beginning, 0 = No transition
-        """
         levels = []
         current_level = 1  # Start with high
         for bit in bits:
@@ -96,10 +64,6 @@ class DigitalToDigitalEncoder:
         return self._generate_waveform(levels)
     
     def _bipolar_ami(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Bipolar-AMI (Alternate Mark Inversion)
-        0 = Zero voltage, 1 = Alternating +V/-V
-        """
         levels = []
         last_one_level = -1  # Will alternate
         for bit in bits:
@@ -111,10 +75,6 @@ class DigitalToDigitalEncoder:
         return self._generate_waveform(levels)
     
     def _manchester(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Manchester Encoding (IEEE 802.3)
-        0 = High-to-Low transition, 1 = Low-to-High transition
-        """
         levels = []
         for bit in bits:
             if bit == 0:
@@ -124,11 +84,6 @@ class DigitalToDigitalEncoder:
         return self._generate_waveform(levels)
     
     def _differential_manchester(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        Differential Manchester
-        Always mid-bit transition
-        0 = Transition at start, 1 = No transition at start
-        """
         levels = []
         current_level = 1
         for bit in bits:
@@ -142,12 +97,6 @@ class DigitalToDigitalEncoder:
         return self._generate_waveform(levels)
     
     def _b8zs(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        B8ZS (Bipolar with 8-Zero Substitution) - North American Standard
-        Replaces 8 consecutive zeros with: 000VB0VB
-        V = Violation (same polarity as last pulse)
-        B = Bipolar (opposite polarity)
-        """
         # First apply substitution
         substituted = self._apply_b8zs_substitution(bits)
         
@@ -193,12 +142,6 @@ class DigitalToDigitalEncoder:
         return result
     
     def _hdb3(self, bits: List[int]) -> Tuple[np.ndarray, np.ndarray]:
-        """
-        HDB3 (High Density Bipolar 3) - European Standard
-        Replaces 4 consecutive zeros based on number of 1s since last substitution:
-        - Odd number of 1s: 000V
-        - Even number of 1s: B00V
-        """
         substituted = self._apply_hdb3_substitution(bits)
         
         levels = []
